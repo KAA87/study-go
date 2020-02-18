@@ -31,14 +31,14 @@ func main() {
 	}
 }
 
-func dirTree(out  io.Writer, path string, printFiles bool) error {
+func dirTree(out io.Writer, path string, printFiles bool) error {
 
-	absPath,err := filepath.Abs(path)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("not find path")
 	}
 
-	typeFile,err := checkTypeFile(absPath)
+	typeFile, err := checkTypeFile(absPath)
 	if err != nil {
 		return fmt.Errorf("error check type file")
 	}
@@ -47,8 +47,8 @@ func dirTree(out  io.Writer, path string, printFiles bool) error {
 		return nil
 	}
 
-	level := len(strings.Split(absPath,string(os.PathSeparator)))
-	err = formatedDirTree(out, absPath, printFiles, level, 0,false,[]string {})
+	level := len(strings.Split(absPath, string(os.PathSeparator)))
+	err = formattedDirTree(out, absPath, printFiles, level, 0, false, []string{})
 	if err != nil {
 		return fmt.Errorf("")
 	}
@@ -56,9 +56,9 @@ func dirTree(out  io.Writer, path string, printFiles bool) error {
 	return nil
 }
 
-func formatedDirTree (out  io.Writer, path string, printFiles bool, level int,baseLevel int, flLast bool, padding []string) error {
+func formattedDirTree(out io.Writer, path string, printFiles bool, level int, baseLevel int, flLast bool, padding []string) error {
 
-	typeFile,err := checkTypeFile(path)
+	typeFile, err := checkTypeFile(path)
 	if err != nil {
 		return fmt.Errorf("error check type file")
 	}
@@ -73,70 +73,61 @@ func formatedDirTree (out  io.Writer, path string, printFiles bool, level int,ba
 			itemLevel = PART2
 		}
 
-		padding = append(padding,itemLevel)
+		padding = append(padding, itemLevel)
 
-		lenPading := len(padding)
-		if(lenPading >= 2){
-			if padding[lenPading-2] == PART2 {
-				padding[lenPading-2] = PART3
-			} else if padding[lenPading-2] == PART1 {
-				padding[lenPading-2] = PART4
-			}
-		}
+		padding = formattedPadding(padding)
 
-		pathArr := strings.Split(path,string(os.PathSeparator))
+		pathArr := strings.Split(path, string(os.PathSeparator))
 
 		sizeF := ""
 		if printFiles == true && typeFile == "file" {
 			sizeF = " (empty)"
-		 	if sizeFile := getSizeFile(path); sizeFile > 0 {
-				sizeF = " ("+strconv.Itoa(sizeFile)+"b)"
+			if sizeFile := getSizeFile(path); sizeFile > 0 {
+				sizeF = " (" + strconv.Itoa(sizeFile) + "b)"
 			}
 		}
 
-		strOut := strings.Join(padding,"") + "" + pathArr[level + baseLevel - 1] + sizeF
+		strOut := strings.Join(padding, "") + "" + pathArr[level+baseLevel-1] + sizeF
 
-
-		fmt.Fprintln(out,strOut)
+		fmt.Fprintln(out, strOut)
 	}
-
 
 	if typeFile == "dir" {
 
 		baseLevel++
 
-		files,err := filepath.Glob(path + "/*")
+		files, err := filepath.Glob(path + "/*")
 		if err != nil {
 			fmt.Print(err)
 			return fmt.Errorf("err not get list file")
 		}
 
-		files = prepareFiles(files,printFiles)
+		files = prepareFiles(files, printFiles)
 
 		lenFiles := len(files)
-		if(lenFiles > 0){
-			for iFP,filePath := range files {
+		if lenFiles > 0 {
+			for iFP, filePath := range files {
 
-					flLast = false
-					if iFP ==  lenFiles - 1 {
-						flLast = true
-					}
+				flLast = false
+				if iFP == lenFiles-1 {
+					flLast = true
+				}
 
-					err := formatedDirTree(out,filePath,printFiles,level,baseLevel,flLast,padding)
-					if err != nil {
-						fmt.Print(err)
-						return fmt.Errorf("err dir tree")
-					}
+				err := formattedDirTree(out, filePath, printFiles, level, baseLevel, flLast, padding)
+				if err != nil {
+					fmt.Print(err)
+					return fmt.Errorf("err dir tree")
+				}
 			}
 		}
-
 
 	}
 
 	return nil
 }
 
-func checkTypeFile(path string) (string,error) {
+// проверка на директорию или файл
+func checkTypeFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", fmt.Errorf("err open file")
@@ -155,7 +146,8 @@ func checkTypeFile(path string) (string,error) {
 	return "file", nil
 }
 
-func getSizeFile(path string) (int) {
+// получить размер файла
+func getSizeFile(path string) int {
 	fi, _ := os.Stat(path)
 
 	size := int(fi.Size())
@@ -163,11 +155,12 @@ func getSizeFile(path string) (int) {
 	return size
 }
 
+// подготовка файлов, сортировка и удаление всех файлов если не задан параметр -f
 func prepareFiles(files []string, printFiles bool) []string {
 
 	if printFiles == false {
-		for k,i:=range files {
-			typeFile,_ := checkTypeFile(i)
+		for k, i := range files {
+			typeFile, _ := checkTypeFile(i)
 
 			if typeFile == "file" {
 				files[k] = files[len(files)-1]
@@ -180,4 +173,19 @@ func prepareFiles(files []string, printFiles bool) []string {
 	sort.Strings(files)
 
 	return files
+}
+
+// форматируем отступы опираясь на текущий
+func formattedPadding(padding []string) []string {
+	lenPadding := len(padding)
+	if lenPadding >= 2 {
+		switch padding[lenPadding-2] {
+		case PART2:
+			padding[lenPadding-2] = PART3
+		case PART1:
+			padding[lenPadding-2] = PART4
+		}
+	}
+
+	return padding
 }
